@@ -172,7 +172,7 @@ for i = 1:(size(s_bc_DTI,1))
     dwi_tissues =  [s_pp_DTI(i).name(1:end-6) 'msmt_tissues.nii.gz'];
     wm_fod_corr_mtn  = [s_pp_DTI(i).name(1:end-6) 'mtnc_msmt_wm_fod.mif'];
     csf_fod_corr_mtn  = [s_pp_DTI(i).name(1:end-6) 'mtnc_msmt_csf_fod.mif'];
-    msmt_wm_peaks_mif = [s_pp_DTI(i).name(1:end-6) 'msmt_wm_peaks.mif'];
+%     msmt_wm_peaks_mif = [s_pp_DTI(i).name(1:end-6) 'msmt_wm_peaks.mif'];
     msmt_wm_peaks_nifti = [s_pp_DTI(i).name(1:end-6) 'msmt_wm_peaks.nii.gz'];
     VOIs_4D_inFA = [subj_DTI_out filesep dwi_basename 'FA_VOIs_4D.nii.gz'];
     
@@ -216,7 +216,7 @@ for i = 1:(size(s_bc_DTI,1))
     % should probably do mtnormalise here
     
     unix(['source ~/.bash_profile ; mtnormalise -force -nthreads 7 -mask ' s_bc_DTI(i).folder filesep dwi_basename 'mask.nii.gz  ' ...
-       s_bc_DTI(i).folder filesep csd_msmt_wm_fod ' ' s_bc_DTI(i).folder filesep wm_fod_corr_mtn ' ' s_bc_DTI(i).folder filesep csd_msmt_csf_fod ' ' dir_DTI_pping filesep csf_fod_corr_mtn]);
+       s_bc_DTI(i).folder filesep csd_msmt_wm_fod ' ' s_bc_DTI(i).folder filesep wm_fod_corr_mtn ' ' s_bc_DTI(i).folder filesep csd_msmt_csf_fod ' ' s_bc_DTI(i).folder filesep csf_fod_corr_mtn]);
     
     % upsample FODs to 1.3 isotropic then calculate peaks
     %     unix(['source ~/.bash_profile ; mrresize -force -nthreads 7 -voxel 2 ' s_bc_DTI(i).folder filesep csd_msmt_wm_fod ' ' s_bc_DTI(i).folder filesep upsamp_msmt_wm_fod]);
@@ -228,12 +228,12 @@ for i = 1:(size(s_bc_DTI,1))
     unix(['source ~/.bash_profile ; mrcat ' s_bc_DTI(i).folder filesep msmt_wm_density ' ' s_bc_DTI(i).folder filesep csf_fod_corr_mtn ' ' subj_DTI_out filesep dwi_tissues ' -axis 3']);
     
     % Convert WM FOD to peaks
-    unix(['source ~/.bash_profile ; sh2peaks -force -nthreads 7 ' s_bc_DTI(i).folder filesep wm_fod_corr_mtn ' ' s_bc_DTI(i).folder filesep msmt_wm_peaks_mif]);
+    unix(['source ~/.bash_profile ; sh2peaks -force -nthreads 7 ' s_bc_DTI(i).folder filesep wm_fod_corr_mtn ' ' s_bc_DTI(i).folder filesep msmt_wm_peaks_nifti]);
     
     % also get a .nii.gz and .bval and .bvec of the peaks for TractSeg
-    unix(['source ~/.bash_profile ; mrconvert -force -nthreads 7 -export_grad_fsl ' s_bc_DTI(i).folder filesep [msmt_wm_peaks_mif(1:end-4)] '.bvec ' ...
-        s_bc_DTI(i).folder filesep [msmt_wm_peaks_mif(1:end-4)] '.bval ' s_bc_DTI(i).folder filesep msmt_wm_peaks_mif ' ' s_bc_DTI(i).folder filesep msmt_wm_peaks_nifti]);
-    
+    unix(['source ~/.bash_profile ; mrinfo -force -nthreads 7 ' s_bc_DTI(i).folder filesep s_bc_DTI(i).name ' -export_grad_fsl ' s_bc_DTI(i).folder filesep (msmt_wm_peaks_nifti(1:end-7)) '.bvec ' ...
+        s_bc_DTI(i).folder filesep (msmt_wm_peaks_nifti(1:end-7)) '.bval -export_grad_mrtrix ' s_bc_DTI(i).folder filesep (msmt_wm_peaks_nifti(1:end-7)) '_bmatrix.txt'  ]);
+    % -export_grad_mrtrix ' s_bc_DTI(i).folder filesep (msmt_wm_peaks_nifti(1:end-7)) '_bmatrix.txt
     %     dwi_base_name = (s_FA(i).name(1:end-9)); % need to test this
     aal_in_FA = [subj_DTI_out filesep FA_2_T1 '_FA_aal_labels.nii.gz'];
     %     exclude_ROIs_in_FA = [subj_DTI_out filesep FA_2_T1 'FA_exclude_ROIs.nii.gz'];
@@ -295,9 +295,9 @@ for i = 1:(size(s_bc_DTI,1))
     
     parfor n = 1:size(sn_VOIs,2)
         unix(['source ~/.bash_profile ; fslroi ' VOIs_4D_inFA ' ' folder filesep dwi_basename sn_VOIs(n).name '.nii.gz 0 -1 0 -1 0 -1 ' sn_VOIs(n).index ' 1']);
-        delete([folder filesep '*_inprep.nii.gz']);
     end
-    
+    delete([folder filesep '*_inprep.nii.gz']);
+
 end
 
 clear VOI_name
@@ -404,7 +404,7 @@ s_l_hipp = (dir([dir_DTI_out filesep '*' filesep '*L_Hipp.nii.gz']));
 
 % This isn't working yet... found a stupid bug from yesterday, should try
 % it again with FACT now that this bug is out.
-% result from Tensor_Prob looks quite good (for whole brain)
+% result from Tensor_Prob looks quite good (for whole brain) with 1 mil
 
 for i = 1:(size(s_peaks,1));
     basename = (s_peaks(i).name(1:end-20));
@@ -413,6 +413,8 @@ for i = 1:(size(s_peaks,1));
     tck_out = ([final_output filesep 'tck_output']);
     VOIs_dir = s_Bstem(i).folder;
     
+	% consider using a -maxlength of 200 mm, this may be set to even lower if looking for short connections specifically and also using -minlength may help clean up the tracts a bit, crude tracking first %followed by some stats on to derive reasonable case specific min and max length or simple a hard coded one, as an optional input... 
+	
     unix(['source ~/.bash_profile ; tckgen -algorithm Tensor_Prob -force -nthreads 7 -select 10000 ' int_output filesep s_dwis(i).name ' ' final_output filesep basename 'TP_L_phC_TD.tck  -seed_dynamic ' ...
         int_output filesep s_fods(i).name  ' -act ' s_fo ' -mask ' int_output filesep s_masks(i).name ' -include ' VOIs_dir filesep s__hipp(i).name ...
         ' -include ' VOIs_dir filesep s_L_par_rois(i).name ' -exclude ' VOIs_dir filesep s_R_wm(i).name ' -exclude ' VOIs_dir filesep s_Bstem(i).name ]);
