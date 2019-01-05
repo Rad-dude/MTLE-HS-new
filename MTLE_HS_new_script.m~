@@ -1,7 +1,5 @@
-% RKUL_MTLE-HS-preproc_new
-% v 0.1 - dd 3/11/2018
-% @ radwan - sunaert
-% We will be doing both the T1 and DTI preproc here
+% RKUL_MTLE-HS-preproc_new v 0.1 - dd 3/11/2018 @ radwan - sunaert We will
+% be doing both the T1 and DTI preproc here
 
 %%%% We need to split our atlases into 4D and use em like that, it's
 %%%% cleaner, much cleaner...
@@ -58,11 +56,14 @@ T2_temp_brain_mask = [dir_templates filesep 'mni_icbm152_t2_tal_nlin_asym_09a_ma
 T2_temp_brain = [dir_templates filesep 'mni_icbm152_t2_tal_nlin_asym_09a_brain.nii.gz'];
 aal_template_brain = [dir_templates filesep 'MNI152_T1_1mm_brain.nii.gz'];
 aal_labels = [dir_templates filesep 'aal_atlas.nii'];
-% The manually defined exclude ROIs
-exclude_labels = [dir_templates filesep 'exclude_ROIs.nii.gz'];
-txt_aal_labels = [dir_templates filesep 'aal_atlas.txt'];
+MNI_lobes_rl = [dir_templates filesep 'MNI_rl1t.nii.gz'];
+% The manually defined exclude ROIs exclude_labels = [dir_templates filesep
+% 'exclude_ROIs.nii.gz']; txt_aal_labels = [dir_templates filesep
+% 'aal_atlas.txt'];
 HOCA = '$FSLDIR/data/atlases/HarvardOxford/HarvardOxford-cort-maxprob-thr25-1mm.nii.gz';
 HOSCA = '$FSLDIR/data/atlases/HarvardOxford/HarvardOxford-sub-maxprob-thr25-1mm.nii.gz';
+JHU_WM = '$FSLDIR/data/atlases/JHU/JHU-ICBM-tracts-maxprob-thr0-1mm.nii.gz';
+
 
 %% Part 2 prep the T1s and DTIs up to mrdegibbs
 
@@ -141,13 +142,36 @@ for i = 1:(size(s_pp_DTI,1))
     
 end
 
-%% Part 4 DWI tensor, maps, response function, SH and peaks calculation
+%% Part 4 DWI tensor, maps, response function, SH and peaks calculation, and VOIs prep
+
 s_bc_DTI = (dir([dir_DTI_int_out filesep '*' filesep '*_pp_bc.mif']));
 DTI_outs  = (dir([dir_DTI_out filesep 'PT_*_DTI_output']));
-VOIs = struct('name', {'056 - PCC', '057 - PC', '058 - R_Cuneal', '059 - L_Cuneal', '062 - R_aPaHC', '063 - L_aPaHC', '064 - R_pPaHC', '065 - L_pPaHC', ...
-    '100 - R_Hipp', '101 - L_Hipp', '102 - R_Amyg', '103 - L_Amyg', '001 - exclude_Lt_WM', '008 - BStem', '012 - exclude_Rt_WM'}, 'lt', {'55.5', '56.5', '57.5', '58.5', ...
-    '61.5', '62.5', '63.5', '64.5', '99.5', '100.5', '101.5', '102.5', '0.5', '7.5', '11.5'}, 'ut', {'56.5', '57.5', '58.5', '59.5', ...
-    '62.5', '63.5', '64.5', '65.5', '100.5', '101.5', '102.5', '103.5', '1.5', '8.5', '12.5'});
+
+% Define VOIs to use from whatever atlas
+VOIs = struct('name', {'056 - PCC', '057 - PC', '058 - R_Cuneal', '059 - L_Cuneal', '062 - R_aPaHC', ...
+    '063 - L_aPaHC', '064 - R_pPaHC', '065 - L_pPaHC', ...
+    '100 - R_Hipp', '101 - L_Hipp', '102 - R_Amyg', '103 - L_Amyg', '013 - Rt_PreCG', '014 - Lt_PreCG',  ... 
+    '001 - exclude_Lt_WM', '008 - BStem', '012 - exclude_Rt_WM', '002 - exclude_Lt_GM', '013 - exclude_Rt_GM', ...
+    '008 - rt_temporal', '080 - lt_temporal', '037 - Rt_VCing', '038 - Lt_VCing'}, 'lt', {'55.5', '56.5', '57.5', '58.5', ...
+    '61.5', '62.5', '63.5', '64.5', '99.5', '100.5', '101.5', '102.5', '12.5', '13.5', '0.5', '7.5', '11.5', '1.5', ...
+    '12.5', '79.5', '7.5', '6.5', '7.5'}, 'ut', {'56.5', '57.5', '58.5', '59.5', ...
+    '62.5', '63.5', '64.5', '65.5', '100.5', '101.5', '102.5', '103.5', '13.5', '14.5', '1.5', ...
+    '8.5', '12.5', '2.5', '13.5', '80.5', '8.5', '7.5', '8.5'});
+% Defining my VOIs after fslmerge not for the exclude_GM VOIs though
+%     sn_VOIs = struct('name', {'BStem_voi', 'L_amyg_voi', 'L_cuneus_voi',
+%     'L_hipp_voi', 'L_apahc_voi', 'L_ppahc_voi', 'L_PreCG_voi', 'PCC_voi',
+%     'PC_voi', ...
+%         'R_amyg_voi', 'R_cuneus_voi', 'R_hipp_voi', 'R_apahc_voi',
+%         'R_ppahc_voi', 'R_PreCG_voi', 'L_GM_voi', 'L_WM_voi', 'R_GM_voi',
+%         'R_WM_voi', 'L_temporal_voi', 'R_temporal_voi'}, ... 'index',
+%         {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11',
+%         '12', '13', '14' ,'15', '16', '17', '18', '19'});
+sn_VOIs = struct('name', {'BStem_voi', 'L_amyg_voi', 'L_cuneus_voi', 'L_hipp_voi', 'L_apahc_voi', 'L_ppahc_voi', 'L_PreCG_voi', 'R_vcing_voi', 'PCC_voi', 'PC_voi', ...
+    'R_amyg_voi', 'R_cuneus_voi', 'R_hipp_voi', 'R_apahc_voi', 'R_ppahc_voi', 'R_PreCG_voi', 'L_vcing_voi', 'L_GM_voi', 'L_WM_voi', 'R_GM_voi', ...
+    'R_WM_voi', 'L_temporal_voi', 'R_temporal_voi'}, ...
+    'index', {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13', '14' ,'15', '16', '17', '18', '19', '20', '21', '22'});
+%     exclude_VOIs = struct('name', {'L_GM', 'R_GM'}); temporals =
+%     struct('name', {'L_temporal', 'R_temporal'});
 
 for i = 1:(size(s_bc_DTI,1))
     DTI_4 = [s_pp_DTI(i).name(1:end-6) 'pp_bc.mif'];
@@ -165,20 +189,31 @@ for i = 1:(size(s_bc_DTI,1))
     csd_msmt_wm_fod = [s_pp_DTI(i).name(1:end-6) 'FOD_wm.mif'];
     csd_wm_fod = [s_pp_DTI(i).name(1:end-6) 'csd_FOD_wm.mif'];
     csd_msmt_csf_fod = [s_pp_DTI(i).name(1:end-6) 'FOD_csf.mif'];
-    %     upsamp_msmt_wm_fod = [s_pp_DTI(i).name(1:end-6) 'upsamp_csd_FOD_wm.mif'];
-    %     upsamp_msmt_csf_fod = [s_pp_DTI(i).name(1:end-6) 'upsamp_csd_FOD_csf.mif'];
+    %     upsamp_msmt_wm_fod = [s_pp_DTI(i).name(1:end-6)
+    %     'upsamp_csd_FOD_wm.mif']; upsamp_msmt_csf_fod =
+    %     [s_pp_DTI(i).name(1:end-6) 'upsamp_csd_FOD_csf.mif'];
     msmt_wm_density = [s_pp_DTI(i).name(1:end-6) 'msmt_wm_density.nii.gz'];
-    %     csd_wm_density = [s_pp_DTI(i).name(1:end-6) 'csd_wm_density.nii.gz'];
+    %     csd_wm_density = [s_pp_DTI(i).name(1:end-6)
+    %     'csd_wm_density.nii.gz'];
     dwi_tissues =  [s_pp_DTI(i).name(1:end-6) 'msmt_tissues.nii.gz'];
     wm_fod_corr_mtn  = [s_pp_DTI(i).name(1:end-6) 'mtnc_msmt_wm_fod.mif'];
     csf_fod_corr_mtn  = [s_pp_DTI(i).name(1:end-6) 'mtnc_msmt_csf_fod.mif'];
-%     msmt_wm_peaks_mif = [s_pp_DTI(i).name(1:end-6) 'msmt_wm_peaks.mif'];
+    %     msmt_wm_peaks_mif = [s_pp_DTI(i).name(1:end-6)
+    %     'msmt_wm_peaks.mif'];
     msmt_wm_peaks_nifti = [s_pp_DTI(i).name(1:end-6) 'msmt_wm_peaks.nii.gz'];
     VOIs_4D_inFA = [subj_DTI_out filesep dwi_basename 'FA_VOIs_4D.nii.gz'];
+    aal_in_FA = [subj_DTI_out filesep FA_2_T1 '_FA_aal_labels.nii.gz'];
+    HOCA_in_FA = [subj_DTI_out filesep FA_2_T1 '_FA_HOCA.nii.gz'];
+    HOSCA_in_FA = [subj_DTI_out filesep FA_2_T1 '_FA_HOSCA.nii.gz'];
+    MNI_in_FA = [subj_DTI_out filesep FA_2_T1 '_MNI_rl1t_in_FA.nii.gz'];
+    folder = [subj_DTI_out filesep dwi_basename 'VOIs'];
+    VOIs_4D = [folder filesep dwi_basename 'VOIs_4D.nii.gz'];
+    mkdir(folder);
     
-    % R 30/12/2018 if you're going to resize then you need to resize your
-    % DWIs before tensor as well! resizing the FODs seems to leave holes in
-    % the peaks images!!!
+    
+    
+    % R 04/01/2019 Not resizing anything
+    
     % Extracting B0s
     
     unix(['source ~/.bash_profile ; dwiextract -force -bzero -nthreads 7 ' s_bc_DTI(i).folder filesep s_bc_DTI(i).name ' ' s_bc_DTI(i).folder filesep  DTI_4_b0]);
@@ -216,14 +251,20 @@ for i = 1:(size(s_bc_DTI,1))
     % should probably do mtnormalise here
     
     unix(['source ~/.bash_profile ; mtnormalise -force -nthreads 7 -mask ' s_bc_DTI(i).folder filesep dwi_basename 'mask.nii.gz  ' ...
-       s_bc_DTI(i).folder filesep csd_msmt_wm_fod ' ' s_bc_DTI(i).folder filesep wm_fod_corr_mtn ' ' s_bc_DTI(i).folder filesep csd_msmt_csf_fod ' ' s_bc_DTI(i).folder filesep csf_fod_corr_mtn]);
+        s_bc_DTI(i).folder filesep csd_msmt_wm_fod ' ' s_bc_DTI(i).folder filesep wm_fod_corr_mtn ' ' s_bc_DTI(i).folder filesep csd_msmt_csf_fod ' ' s_bc_DTI(i).folder filesep csf_fod_corr_mtn]);
     
     % upsample FODs to 1.3 isotropic then calculate peaks
-    %     unix(['source ~/.bash_profile ; mrresize -force -nthreads 7 -voxel 2 ' s_bc_DTI(i).folder filesep csd_msmt_wm_fod ' ' s_bc_DTI(i).folder filesep upsamp_msmt_wm_fod]);
-    %     unix(['source ~/.bash_profile ; mrresize -force -nthreads 7 -voxel 2 ' s_bc_DTI(i).folder filesep csd_msmt_csf_fod ' ' s_bc_DTI(i).folder filesep upsamp_msmt_csf_fod]);
+    %     unix(['source ~/.bash_profile ; mrresize -force -nthreads 7
+    %     -voxel 2 ' s_bc_DTI(i).folder filesep csd_msmt_wm_fod ' '
+    %     s_bc_DTI(i).folder filesep upsamp_msmt_wm_fod]); unix(['source
+    %     ~/.bash_profile ; mrresize -force -nthreads 7 -voxel 2 '
+    %     s_bc_DTI(i).folder filesep csd_msmt_csf_fod ' '
+    %     s_bc_DTI(i).folder filesep upsamp_msmt_csf_fod]);
     
     unix(['source ~/.bash_profile ; mrconvert ' s_bc_DTI(i).folder filesep wm_fod_corr_mtn ' ' s_bc_DTI(i).folder filesep msmt_wm_density ' -coord 3 0 ']);
-    %     unix(['source ~/.bash_profile ; mrconvert ' s_bc_DTI(i).folder filesep csd_wm_fod ' ' s_bc_DTI(i).folder filesep csd_wm_density ' -coord 3 0 ']);
+    %     unix(['source ~/.bash_profile ; mrconvert ' s_bc_DTI(i).folder
+    %     filesep csd_wm_fod ' ' s_bc_DTI(i).folder filesep csd_wm_density
+    %     ' -coord 3 0 ']);
     
     unix(['source ~/.bash_profile ; mrcat ' s_bc_DTI(i).folder filesep msmt_wm_density ' ' s_bc_DTI(i).folder filesep csf_fod_corr_mtn ' ' subj_DTI_out filesep dwi_tissues ' -axis 3']);
     
@@ -233,19 +274,14 @@ for i = 1:(size(s_bc_DTI,1))
     % also get a .nii.gz and .bval and .bvec of the peaks for TractSeg
     unix(['source ~/.bash_profile ; mrinfo -force -nthreads 7 ' s_bc_DTI(i).folder filesep s_bc_DTI(i).name ' -export_grad_fsl ' s_bc_DTI(i).folder filesep (msmt_wm_peaks_nifti(1:end-7)) '.bvec ' ...
         s_bc_DTI(i).folder filesep (msmt_wm_peaks_nifti(1:end-7)) '.bval -export_grad_mrtrix ' s_bc_DTI(i).folder filesep (msmt_wm_peaks_nifti(1:end-7)) '_bmatrix.txt'  ]);
-    % -export_grad_mrtrix ' s_bc_DTI(i).folder filesep (msmt_wm_peaks_nifti(1:end-7)) '_bmatrix.txt
-    %     dwi_base_name = (s_FA(i).name(1:end-9)); % need to test this
-    aal_in_FA = [subj_DTI_out filesep FA_2_T1 '_FA_aal_labels.nii.gz'];
-    %     exclude_ROIs_in_FA = [subj_DTI_out filesep FA_2_T1 'FA_exclude_ROIs.nii.gz'];
-    HOCA_in_FA = [subj_DTI_out filesep FA_2_T1 '_FA_HOCA.nii.gz'];
-    HOSCA_in_FA = [subj_DTI_out filesep FA_2_T1 '_FA_HOSCA.nii.gz'];
     
+    
+    % Warping MNI 1mm to FA space
     unix(['source ~/.bash_profile ; antsRegistrationSyNQuick.sh -d 3 -n 7 -j 1 -t s -m ' subj_DTI_out filesep DTI_FA_5 ...
         ' -f '  aal_template_brain ' -o ' subj_DTI_out filesep FA_2_T1 'FA_2_MNI  -x ' ...
         subj_DTI_out filesep FA_2_T1 'b0_BrainExtractionMask.nii.gz']);
-    folder = [subj_DTI_out filesep dwi_basename 'VOIs'];
-    VOIs_4D = [subj_DTI_out filesep dwi_basename 'VOIs' filesep dwi_basename 'VOIs_4D.nii.gz'];
-    mkdir(folder);
+    
+    
     
     % clear previous parallel pool if still present and start a new one
     % with 4 workers
@@ -258,14 +294,22 @@ for i = 1:(size(s_bc_DTI,1))
         VOI_lt = (VOIs(n).lt);
         VOI_ut = (VOIs(n).ut);
         
-        if (n <= 12)
+        if (n <= 14)
             labels_file = aal_labels
-        elseif (n > 12)
+        elseif (n > 14 & n < 20)
             labels_file = HOSCA
+        elseif (n > 19 & n <= 21)
+            labels_file = MNI_lobes_rl
+        elseif (n > 21 )
+            labels_file = JHU_WM
         end
         
         % isolating each VOIs, smoothing, thr at 0.1 and binarizing.
-        unix(['source ~/.bash_profile ; fslmaths '  labels_file ' -thr ' VOI_lt ' -uthr ' VOI_ut ' -s 2 -thr 0.1 -bin ' VOI_name '_inprep.nii.gz']);
+        if (n <= 15 || n >= 22)
+            unix(['source ~/.bash_profile ; fslmaths '  labels_file ' -thr ' VOI_lt ' -uthr ' VOI_ut ' -s 1.5 -thr 0.1 -bin ' VOI_name '_inprep.nii.gz']);
+        elseif (n > 15 && n <22)
+            unix(['source ~/.bash_profile ; fslmaths '  labels_file ' -thr ' VOI_lt ' -uthr ' VOI_ut ' -bin ' VOI_name '_inprep.nii.gz']);
+        end
         
     end
     
@@ -273,45 +317,71 @@ for i = 1:(size(s_bc_DTI,1))
     
     % This is the correct way of using WIMT in reverse :)
     unix(['source ~/.bash_profile ; WarpTimeSeriesImageMultiTransform 4 ' VOIs_4D ' ' VOIs_4D_inFA ...
-        ' -R ' subj_DTI_out filesep DTI_FA_5 ' -i ' subj_DTI_out filesep FA_2_T1 'FA_2_MNI0GenericAffine.mat '  subj_DTI_out filesep FA_2_T1 'FA_2_MNI1InverseWarp.nii.gz --use-NN']);%still using NN as ML is rubbish
+        ' -R ' subj_DTI_out filesep DTI_FA_5 ' -i ' subj_DTI_out filesep FA_2_T1 'FA_2_MNI0GenericAffine.mat '  subj_DTI_out filesep FA_2_T1 'FA_2_MNI1InverseWarp.nii.gz --use-NN']);
     
     unix(['source ~/.bash_profile ; WarpImageMultiTransform 3 ' aal_labels ' ' aal_in_FA ...
-        ' -R ' subj_DTI_out filesep DTI_FA_5 ' -i ' subj_DTI_out filesep FA_2_T1 'FA_2_MNI0GenericAffine.mat '  subj_DTI_out filesep FA_2_T1 'FA_2_MNI1InverseWarp.nii.gz --use-NN']);%still using NN as ML is rubbish
+        ' -R ' subj_DTI_out filesep DTI_FA_5 ' -i ' subj_DTI_out filesep FA_2_T1 'FA_2_MNI0GenericAffine.mat '  subj_DTI_out filesep FA_2_T1 'FA_2_MNI1InverseWarp.nii.gz --use-NN']);
     
     unix(['source ~/.bash_profile ; WarpImageMultiTransform 3 ' HOCA ' ' HOCA_in_FA ...
-        ' -R ' subj_DTI_out filesep DTI_FA_5 ' -i ' subj_DTI_out filesep FA_2_T1 'FA_2_MNI0GenericAffine.mat '  subj_DTI_out filesep FA_2_T1 'FA_2_MNI1InverseWarp.nii.gz --use-NN']);%still using NN as ML is rubbish
+        ' -R ' subj_DTI_out filesep DTI_FA_5 ' -i ' subj_DTI_out filesep FA_2_T1 'FA_2_MNI0GenericAffine.mat '  subj_DTI_out filesep FA_2_T1 'FA_2_MNI1InverseWarp.nii.gz --use-NN']);
     
     unix(['source ~/.bash_profile ; WarpImageMultiTransform 3 ' HOSCA ' ' HOSCA_in_FA ...
-        ' -R ' subj_DTI_out filesep DTI_FA_5 ' -i ' subj_DTI_out filesep FA_2_T1 'FA_2_MNI0GenericAffine.mat '  subj_DTI_out filesep FA_2_T1 'FA_2_MNI1InverseWarp.nii.gz --use-NN']);%still using NN as ML is rubbish
+        ' -R ' subj_DTI_out filesep DTI_FA_5 ' -i ' subj_DTI_out filesep FA_2_T1 'FA_2_MNI0GenericAffine.mat '  subj_DTI_out filesep FA_2_T1 'FA_2_MNI1InverseWarp.nii.gz --use-NN']);
+    
+    unix(['source ~/.bash_profile ; WarpImageMultiTransform 3 ' MNI_lobes_rl ' ' MNI_in_FA ...
+        ' -R ' subj_DTI_out filesep DTI_FA_5 ' -i ' subj_DTI_out filesep FA_2_T1 'FA_2_MNI0GenericAffine.mat '  subj_DTI_out filesep FA_2_T1 'FA_2_MNI1InverseWarp.nii.gz --use-NN']);
+    
     % The atlases are just for a sanity check, and maybe for later use if
     % necessary, however the VOIs warped to dMRI space in 4D will be used
     % for the tracking.
     
-    % need to figure out the order that fslsplit spits them out in
-    sn_VOIs = struct('name', {'BStem', 'L_amyg', 'L_cuneus', 'L_hipp', 'L_apahc', 'L_ppahc', 'PCC', 'PC', ...
-        'R_amyg', 'R_cuneus', 'R_hipp', 'R_apahc', 'R_ppahc', 'L_WM', 'R_WM'}, 'index', {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13', '14'});
     
     clear n
     
     parfor n = 1:size(sn_VOIs,2)
+        
         unix(['source ~/.bash_profile ; fslroi ' VOIs_4D_inFA ' ' folder filesep dwi_basename sn_VOIs(n).name '.nii.gz 0 -1 0 -1 0 -1 ' sn_VOIs(n).index ' 1']);
+        
+%         delete([folder filesep '*_inprep.nii.gz']);
+        
     end
-    delete([folder filesep '*_inprep.nii.gz']);
-
 end
 
 clear VOI_name
-parfor n =1:4
+
+% So now we have exclusionary rois for white matter and grey matter of each
+% hemisphere separately with the include/seeding VOIs (those belonging to
+% the medial temporal lobe as holes in the exclude VOIs also.. I hope this
+% works yo!
+
+sn_VOIs = struct('name', {'BStem_voi', 'L_amyg_voi', 'L_cuneus_voi', 'L_hipp_voi', 'L_apahc_voi', 'L_ppahc_voi', 'L_PreCG_voi', 'R_vcing_voi', 'PCC_voi', 'PC_voi', ...
+    'R_amyg_voi', 'R_cuneus_voi', 'R_hipp_voi', 'R_apahc_voi', 'R_ppahc_voi', 'R_PreCG_voi', 'L_vcing_voi', 'L_GM_voi', 'L_WM_voi', 'R_GM_voi', ...
+    'R_WM_voi', 'R_temporal_voi', 'L_temporal_voi'}, ...
+    'index', {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13', '14' ,'15', '16', '17', '18', '19', '20', '21', '22'});
+
+% parfor n =1:2
     VOI_name = ([folder filesep dwi_basename]);
-    unix(['source ~/.bash_profile ; fslmaths '  VOI_name (sn_VOIs(7).name(1:end)) ' -add ' VOI_name (sn_VOIs(8).name(1:end)) ' -add ' VOI_name (sn_VOIs(10).name(1:end)) ...
-        ' -bin ' VOI_name 'R_Par_rois.nii.gz']);
-    unix(['source ~/.bash_profile ; fslmaths '  VOI_name (sn_VOIs(7).name(1:end)) ' -add ' VOI_name (sn_VOIs(8).name(1:end)) ' -add ' VOI_name (sn_VOIs(3).name(1:end)) ...
-        ' -bin ' VOI_name 'L_Par_rois.nii.gz']);
-    unix(['source ~/.bash_profile ; fslmaths '  VOI_name (sn_VOIs(9).name(1:end)) ' -add ' VOI_name (sn_VOIs(11).name(1:end)) ' -add ' VOI_name (sn_VOIs(12).name(1:end)) ...
-        ' -add ' VOI_name (sn_VOIs(13).name(1:end)) ' -bin ' VOI_name 'R_Temp_rois.nii.gz']);
-    unix(['source ~/.bash_profile ; fslmaths '  VOI_name (sn_VOIs(2).name(1:end)) ' -add ' VOI_name (sn_VOIs(4).name(1:end)) ' -add ' VOI_name (sn_VOIs(5).name(1:end)) ...
-        ' -add ' VOI_name (sn_VOIs(6).name(1:end)) ' -bin ' VOI_name 'L_Temp_rois.nii.gz']);
-end
+    unix(['source ~/.bash_profile ; fslmaths '  VOI_name sn_VOIs(9).name ' -add ' VOI_name sn_VOIs(4).name ' -add ' VOI_name sn_VOIs(6).name ... 
+        ' -add ' VOI_name sn_VOIs(22).name ' -add ' VOI_name sn_VOIs(17).name ' -binv -mul ' VOI_name sn_VOIs(18).name ' ' VOI_name 'L_exclude_GM.nii.gz']);
+    unix(['source ~/.bash_profile ; fslmaths '  VOI_name sn_VOIs(9).name ' -add ' VOI_name sn_VOIs(13).name ' -add ' VOI_name sn_VOIs(15).name ...
+        ' -add ' VOI_name sn_VOIs(23).name ' -add ' VOI_name sn_VOIs(8).name ' -binv -mul ' VOI_name sn_VOIs(20).name ' ' VOI_name 'R_exclude_GM.nii.gz']);
+    
+    
+    % unix(['source ~/.bash_profile ; fslmaths '  VOI_name
+    % (sn_VOIs(7).name(1:end)) ' -add ' VOI_name (sn_VOIs(8).name(1:end)) '
+    % -add ' VOI_name (sn_VOIs(3).name(1:end)) ...
+    %     ' -bin ' VOI_name 'L_Par_rois.nii.gz']);
+    % unix(['source ~/.bash_profile ; fslmaths '  VOI_name
+    % (sn_VOIs(9).name(1:end)) ' -add ' VOI_name (sn_VOIs(11).name(1:end))
+    % ' -add ' VOI_name (sn_VOIs(12).name(1:end)) ...
+    %     ' -add ' VOI_name (sn_VOIs(13).name(1:end)) ' -bin ' VOI_name
+    %     'R_Temp_rois.nii.gz']);
+    % unix(['source ~/.bash_profile ; fslmaths '  VOI_name
+    % (sn_VOIs(2).name(1:end)) ' -add ' VOI_name (sn_VOIs(4).name(1:end)) '
+    % -add ' VOI_name (sn_VOIs(5).name(1:end)) ...
+    %     ' -add ' VOI_name (sn_VOIs(6).name(1:end)) ' -bin ' VOI_name
+    %     'L_Temp_rois.nii.gz']);
+% end
 
 poolobj = gcp('nocreate');
 delete(poolobj)
@@ -328,7 +398,9 @@ s_T1_brain = (dir([dir_t1_int_out filesep '*' filesep '*_BrainExtractionBrain.ni
 for i  = 1:(size(s_T1s,1))
     subj_basename = (s_T1s(i).name(1:end-9)); % to create a base name for ANTs CTH output
     dwi_basename = (s_FAs(i).name(1:end-9));
-    %     Cort_th_subj = [dir_t1_out filesep subj_basename 'output' filesep  subj_basename 'cortical_thickness' filesep subj_basename 'antsCTh_'];
+    %     Cort_th_subj = [dir_t1_out filesep subj_basename 'output' filesep
+    %     subj_basename 'cortical_thickness' filesep subj_basename
+    %     'antsCTh_'];
     Cort_th_subj = [dir_t1_out filesep subj_basename 'output' filesep  subj_basename 'cortical_thickness'];
     mkdir(Cort_th_subj);
     tpms = (dir([dir_t1_out filesep subj_basename 'output' filesep  subj_basename 'cortical_thickness' filesep subj_basename '*antsCTh_BrainSegmentationPosteriors*.nii.gz']));
@@ -376,8 +448,25 @@ end
 
 
 %% Part 6    Fiber tracking and tckmap
-% First we need to define a few variables for the tckgen command
-% Why not use ACT here, just need to warp, that is all.
+% First we need to define a few variables for the tckgen command Why not
+% use ACT here, just need to warp, that is all.
+
+clear all;
+clc;
+
+dir_source_DTI = [dir_main filesep 'NII' filesep 'DTI' filesep 'orig'];
+dir_source_T1 = [dir_main filesep 'NII' filesep 'T1s' filesep 'orig'];
+dir_t1_int_out = [dir_main filesep 'NII' filesep 'T1s' filesep 'intermediate'];
+dir_t1_out = [dir_main filesep 'NII' filesep 'T1s' filesep 'T1_output'];
+% dir_t1_temp_wskull = [dir_t1_int_out filesep 'T1_template_wskull'];
+% dir_t1_temp_brain = [dir_t1_int_out filesep 'T1_template_brain'];
+dir_DTI_int_out = [dir_main filesep 'NII' filesep 'DTI' filesep 'intermediate'];
+dir_DTI_out = [dir_main filesep 'NII' filesep 'DTI' filesep 'DTI_output'];
+dir_log    = [dir_main filesep 'LOG'];
+dir_templates = [dir_main filesep 'templates'];
+
+% need to define a nice variable containing all my VOIs.... then try
+% tracking again :) R - 5/01/
 
 s_peaks = (dir([dir_DTI_int_out filesep '*' filesep '*peaks.nii.gz']));
 FAs = (dir([dir_DTI_output filesep '*' filesep '*FA.nii.gz']));
@@ -398,13 +487,13 @@ s_l_hipp = (dir([dir_DTI_out filesep '*' filesep '*L_Hipp.nii.gz']));
 
 
 % Loop over the peaks files and do tckgen with include and exclude rois
-% defined above, if using ACT need to implement warping of tpms from
-% t1 to b0 space... should be simple enought, perhaps another 80 lines.
+% defined above, if using ACT need to implement warping of tpms from t1 to
+% b0 space... should be simple enought, perhaps another 80 lines.
 
 
 % This isn't working yet... found a stupid bug from yesterday, should try
-% it again with FACT now that this bug is out.
-% result from Tensor_Prob looks quite good (for whole brain) with 1 mil
+% it again with FACT now that this bug is out. result from Tensor_Prob
+% looks quite good (for whole brain) with 1 mil
 
 for i = 1:(size(s_peaks,1));
     basename = (s_peaks(i).name(1:end-20));
@@ -413,19 +502,39 @@ for i = 1:(size(s_peaks,1));
     tck_out = ([final_output filesep 'tck_output']);
     VOIs_dir = s_Bstem(i).folder;
     
-	% consider using a -maxlength of 200 mm, this may be set to even lower if looking for short connections specifically and also using -minlength may help clean up the tracts a bit, crude tracking first %followed by some stats on to derive reasonable case specific min and max length or simple a hard coded one, as an optional input... 
-	
+    % consider using a -maxlength of 200 mm, this may be set to even lower
+    % if looking for short connections specifically and also using
+    % -minlength may help clean up the tracts a bit, crude tracking first
+    % %followed by some stats on to derive reasonable case specific min and
+    % max length or simple a hard coded one, as an optional input...
+    
     
     % The left phCing with the 4 methods of tracking
-%     unix(['source ~/.bash_profile ; tckgen -algorithm Tensor_Prob -force -nthreads 7 -select 10000 ' int_output filesep s_dwis(i).name ' ' final_output filesep basename 'TP_L_phC_TP.tck  -seed_dynamic ' ...
-%         int_output filesep s_fods(i).name  ' -act ' final_output filesep dwi_p5tt(i).name ' -mask ' int_output filesep s_masks(i).name ' -include ' VOIs_dir filesep s_l_hipp(i).name ...
-%         ' -include ' VOIs_dir filesep s_L_par_rois(i).name ' -exclude ' VOIs_dir filesep s_R_wm(i).name ' -exclude ' VOIs_dir filesep s_Bstem(i).name ]);
+    %     unix(['source ~/.bash_profile ; tckgen -algorithm Tensor_Prob
+    %     -force -nthreads 7 -select 10000 ' int_output filesep
+    %     s_dwis(i).name ' ' final_output filesep basename 'TP_L_phC_TP.tck
+    %     -seed_dynamic ' ...
+    %         int_output filesep s_fods(i).name  ' -act ' final_output
+    %         filesep dwi_p5tt(i).name ' -mask ' int_output filesep
+    %         s_masks(i).name ' -include ' VOIs_dir filesep
+    %         s_l_hipp(i).name ... ' -include ' VOIs_dir filesep
+    %         s_L_par_rois(i).name ' -exclude ' VOIs_dir filesep
+    %         s_R_wm(i).name ' -exclude ' VOIs_dir filesep s_Bstem(i).name
+    %         ]);
     
-    unix(['source ~/.bash_profile ; tckgen -algorithm Tensor_Prob -force -nthreads 7 -select 10000 ' int_output filesep s_dwis(i).name ' ' final_output filesep basename 'TP_L_phC_TP.tck  -seed_dynamic ' ...
-        int_output filesep s_fods(i).name  ' -act ' final_output filesep dwi_p5tt(i).name ' -mask ' int_output filesep s_masks(i).name  ...
-        ' -include ' VOIs_dir filesep s_L_par_rois(i).name ' -exclude ' VOIs_dir filesep s_R_wm(i).name ' -exclude ' VOIs_dir filesep s_Bstem(i).name ]);
     % need to try this with -seed_image and use the hippocampus as the
     % seed.
+    
+    % perhaps I need to rethink this... why not track the whole cingulum
+    % bundle!! use the MPFC, PCC and hippos + apaHC
+    unix(['source ~/.bash_profile ; tckgen -algorithm Tensor_Prob -force -nthreads 7 -select 5000 ' int_output filesep s_dwis(i).name ' ' final_output filesep basename 'TP_L_phC_TP.tck  -seed_gmwmi ' ...
+        VOIs_dir filesep s_l_hipp(i).name ' -act ' final_output filesep dwi_p5tt(i).name ' -mask ' int_output filesep s_masks(i).name  ...
+        ' -include ' VOIs_dir filesep s_L_par_rois(i).name ' -exclude ' VOIs_dir filesep s_R_wm(i).name ' -exclude ' VOIs_dir filesep s_Bstem(i).name ]);
+    % and once for the right side
+    unix(['source ~/.bash_profile ; tckgen -algorithm Tensor_Prob -force -nthreads 7 -select 5000 ' int_output filesep s_dwis(i).name ' ' final_output filesep basename 'TP_R_phC_TP.tck  -seed_gmwmi ' ...
+        VOIs_dir filesep s_r_hipp(i).name ' -act ' final_output filesep dwi_p5tt(i).name ' -mask ' int_output filesep s_masks(i).name  ...
+        ' -include ' VOIs_dir filesep s_R_par_rois(i).name ' -exclude ' VOIs_dir filesep s_L_wm(i).name ' -exclude ' VOIs_dir filesep s_Bstem(i).name ]);
+    
     unix(['source ~/.bash_profile ; tckgen -algorithm Tensor_Det -force -nthreads 7 -select 10000 ' int_output filesep s_dwis(i).name ' ' final_output filesep basename 'TP_L_phC_TD.tck  -seed_dynamic ' ...
         int_output filesep s_fods(i).name  ' -act ' final_output filesep dwi_p5tt(i).name ' -mask ' int_output filesep s_masks(i).name ' -include ' VOIs_dir filesep s_l_hipp(i).name ...
         ' -include ' VOIs_dir filesep s_L_par_rois(i).name ' -exclude ' VOIs_dir filesep s_R_wm(i).name ' -exclude ' VOIs_dir filesep s_Bstem(i).name ]);
@@ -435,22 +544,22 @@ for i = 1:(size(s_peaks,1));
     unix(['source ~/.bash_profile ; tckgen -algorithm iFOD2 -force -nthreads 7 -select 10000 ' int_output filesep s_fods(i).name ' ' final_output filesep basename 'TP_L_phC_iFOD2.tck  -seed_dynamic ' ...
         int_output filesep s_fods(i).name  ' -act ' final_output filesep dwi_p5tt(i).name ' -mask ' int_output filesep s_masks(i).name ' -include ' VOIs_dir filesep s_l_hipp(i).name ...
         ' -include ' VOIs_dir filesep s_L_par_rois(i).name ' -exclude ' VOIs_dir filesep s_R_wm(i).name ' -exclude ' VOIs_dir filesep s_Bstem(i).name ]);
-
-	    % The Right phCing with the 4 methods of tracking
-	    unix(['source ~/.bash_profile ; tckgen -algorithm Tensor_Prob -force -nthreads 7 -select 10000 ' int_output filesep s_dwis(i).name ' ' final_output filesep basename 'TP_R_phC_TP.tck  -seed_dynamic ' ...
+    
+    % The Right phCing with the 4 methods of tracking
+    unix(['source ~/.bash_profile ; tckgen -algorithm Tensor_Prob -force -nthreads 7 -select 10000 ' int_output filesep s_dwis(i).name ' ' final_output filesep basename 'TP_R_phC_TP.tck  -seed_dynamic ' ...
         int_output filesep s_fods(i).name  ' -act ' final_output filesep dwi_p5tt(i).name ' -mask ' int_output filesep s_masks(i).name ' -include ' VOIs_dir filesep s_r_hipp(i).name ...
         ' -include ' VOIs_dir filesep s_R_par_rois(i).name ' -exclude ' VOIs_dir filesep s_L_wm(i).name ' -exclude ' VOIs_dir filesep s_Bstem(i).name ])
-	    unix(['source ~/.bash_profile ; tckgen -algorithm Tensor_Det -force -nthreads 7 -select 10000 ' int_output filesep s_dwis(i).name ' ' final_output filesep basename 'TP_R_phC_TD.tck  -seed_dynamic ' ...
+    unix(['source ~/.bash_profile ; tckgen -algorithm Tensor_Det -force -nthreads 7 -select 10000 ' int_output filesep s_dwis(i).name ' ' final_output filesep basename 'TP_R_phC_TD.tck  -seed_dynamic ' ...
         int_output filesep s_fods(i).name  ' -act ' final_output filesep dwi_p5tt(i).name ' -mask ' int_output filesep s_masks(i).name ' -include ' VOIs_dir filesep s_r_hipp(i).name ...
         ' -include ' VOIs_dir filesep s_R_par_rois(i).name ' -exclude ' VOIs_dir filesep s_L_wm(i).name ' -exclude ' VOIs_dir filesep s_Bstem(i).name ]);
-	    unix(['source ~/.bash_profile ; tckgen -algorithm FACT -force -nthreads 7 -select 10000 ' int_output filesep s_peaks(i).name ' ' final_output filesep basename 'TP_R_phC_FACT.tck  -seed_dynamic ' ...
+    unix(['source ~/.bash_profile ; tckgen -algorithm FACT -force -nthreads 7 -select 10000 ' int_output filesep s_peaks(i).name ' ' final_output filesep basename 'TP_R_phC_FACT.tck  -seed_dynamic ' ...
         int_output filesep s_fods(i).name  ' -act ' final_output filesep dwi_p5tt(i).name ' -mask ' int_output filesep s_masks(i).name ' -include ' VOIs_dir filesep s_r_hipp(i).name ...
         ' -include ' VOIs_dir filesep s_R_par_rois(i).name ' -exclude ' VOIs_dir filesep s_L_wm(i).name ' -exclude ' VOIs_dir filesep s_Bstem(i).name ]);
-	    unix(['source ~/.bash_profile ; tckgen -algorithm iFOD2 -force -nthreads 7 -select 10000 ' int_output filesep s_fods(i).name ' ' final_output filesep basename 'TP_R_phC_iFOD2.tck  -seed_dynamic ' ...
-	        int_output filesep s_fods(i).name  ' -act ' final_output filesep dwi_p5tt(i).name ' -mask ' int_output filesep s_masks(i).name ' -include ' VOIs_dir filesep s_r_hipp(i).name ...
-	        ' -include ' VOIs_dir filesep s_R_par_rois(i).name ' -exclude ' VOIs_dir filesep s_L_wm(i).name ' -exclude ' VOIs_dir filesep s_Bstem(i).name ]);    
-	
-	
+    unix(['source ~/.bash_profile ; tckgen -algorithm iFOD2 -force -nthreads 7 -select 10000 ' int_output filesep s_fods(i).name ' ' final_output filesep basename 'TP_R_phC_iFOD2.tck  -seed_dynamic ' ...
+        int_output filesep s_fods(i).name  ' -act ' final_output filesep dwi_p5tt(i).name ' -mask ' int_output filesep s_masks(i).name ' -include ' VOIs_dir filesep s_r_hipp(i).name ...
+        ' -include ' VOIs_dir filesep s_R_par_rois(i).name ' -exclude ' VOIs_dir filesep s_L_wm(i).name ' -exclude ' VOIs_dir filesep s_Bstem(i).name ]);
+    
+    
     %     unix(['source ~/.bash_profile ; tckmap -force -nthreads 7 ']);
 end
 
