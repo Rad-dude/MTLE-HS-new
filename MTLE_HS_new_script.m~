@@ -34,6 +34,7 @@ s_DTI = (dir([dir_source_DTI filesep '*.nii.gz']));
 s_T1s = (dir([dir_source_T1 filesep '*_orig.nii.gz']));
 DTI_files = (extractfield(s_DTI,'name'))';
 T1s_files = (extractfield(s_T1s,'name'))';
+
 unix(['touch ' dir_log filesep 'sanity_check_fail.txt']);
 unix(['touch ' dir_log filesep 'sanity_check_pass.txt']);
 
@@ -47,7 +48,7 @@ for i = 1:(size(T1s_files,1))
     end
 end
 
-% Defining template images
+% Defining template images and other variables
 T1_template = [dir_templates filesep 'PD25-T1MPRAGE-template-1mm.nii.gz'];
 T1_template_brain = [dir_templates filesep 'PD25-T1MPRAGE-template-1mm_brain.nii.gz'];
 T1_temp_brain_mask = [dir_templates filesep 'PD25-atlas-mask-1mm.nii.gz'];
@@ -63,6 +64,8 @@ MNI_lobes_rl = [dir_templates filesep 'MNI_rl1t.nii.gz'];
 HOCA = '$FSLDIR/data/atlases/HarvardOxford/HarvardOxford-cort-maxprob-thr25-1mm.nii.gz';
 HOSCA = '$FSLDIR/data/atlases/HarvardOxford/HarvardOxford-sub-maxprob-thr25-1mm.nii.gz';
 JHU_WM = '$FSLDIR/data/atlases/JHU/JHU-ICBM-tracts-maxprob-thr0-1mm.nii.gz';
+s_dg_DTI = (dir([dir_DTI_int_out filesep '*' filesep '*_dn_dg.mif']));
+s_pp_DTI = (dir([dir_DTI_int_out filesep '*' filesep '*_pp.mif']));
 
 
 %% Part 2 prep the T1s and DTIs up to mrdegibbs
@@ -122,7 +125,8 @@ end
 
 %% Part 3 DTI preprocessing with parfor and Eddy_cuda, then bias correct in a regular for loop
 
-s_dg_DTI = (dir([dir_DTI_int_out filesep '*' filesep '*_dn_dg.mif']));
+
+
 poolobj = gcp('nocreate');
 delete(poolobj)
 parpool(4);
@@ -134,7 +138,6 @@ parfor i = 1:(size(s_dg_DTI,1))
     
 end
 
-s_pp_DTI = (dir([dir_DTI_int_out filesep '*' filesep '*_pp.mif']));
 for i = 1:(size(s_pp_DTI,1))
     DTI_4 = [s_pp_DTI(i).name(1:end-6) 'pp_bc.mif'];
     
@@ -168,8 +171,14 @@ VOIs = struct('name', {'056 - PCC', '057 - PC', '058 - R_Cuneal', '059 - L_Cunea
 %         '12', '13', '14' ,'15', '16', '17', '18', '19'});
 sn_VOIs = struct('name', {'BStem_voi', 'L_amyg_voi', 'L_cuneus_voi', 'L_hipp_voi', 'L_apahc_voi', 'L_ppahc_voi', 'L_PreCG_voi', 'R_vcing_voi', 'PCC_voi', 'PC_voi', ...
     'R_amyg_voi', 'R_cuneus_voi', 'R_hipp_voi', 'R_apahc_voi', 'R_ppahc_voi', 'R_PreCG_voi', 'L_vcing_voi', 'L_GM_voi', 'L_WM_voi', 'R_GM_voi', ...
-    'R_WM_voi', 'L_temporal_voi', 'R_temporal_voi'}, ...
+    'R_WM_voi', 'R_temporal_voi', 'L_temporal_voi'}, ...
     'index', {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13', '14' ,'15', '16', '17', '18', '19', '20', '21', '22'});
+
+% These are the VOIs we're using now 
+
+save([dir_main filesep 'sn_VOIs.mat'] , 'sn_VOIs');
+
+
 %     exclude_VOIs = struct('name', {'L_GM', 'R_GM'}); temporals =
 %     struct('name', {'L_temporal', 'R_temporal'});
 
@@ -205,7 +214,7 @@ for i = 1:(size(s_bc_DTI,1))
     aal_in_FA = [subj_DTI_out filesep FA_2_T1 '_FA_aal_labels.nii.gz'];
     HOCA_in_FA = [subj_DTI_out filesep FA_2_T1 '_FA_HOCA.nii.gz'];
     HOSCA_in_FA = [subj_DTI_out filesep FA_2_T1 '_FA_HOSCA.nii.gz'];
-    MNI_in_FA = [subj_DTI_out filesep FA_2_T1 '_MNI_rl1t_in_FA.nii.gz'];
+    MNI_in_FA = [subj_DTI_out filesep FA_2_T1 '_MNI_rl1t.nii.gz'];
     folder = [subj_DTI_out filesep dwi_basename 'VOIs'];
     VOIs_4D = [folder filesep dwi_basename 'VOIs_4D.nii.gz'];
     mkdir(folder);
@@ -342,7 +351,7 @@ for i = 1:(size(s_bc_DTI,1))
         
         unix(['source ~/.bash_profile ; fslroi ' VOIs_4D_inFA ' ' folder filesep dwi_basename sn_VOIs(n).name '.nii.gz 0 -1 0 -1 0 -1 ' sn_VOIs(n).index ' 1']);
         
-%         delete([folder filesep '*_inprep.nii.gz']);
+        delete([folder filesep '*_inprep.nii.gz']);
         
     end
 end
@@ -354,17 +363,12 @@ clear VOI_name
 % the medial temporal lobe as holes in the exclude VOIs also.. I hope this
 % works yo!
 
-sn_VOIs = struct('name', {'BStem_voi', 'L_amyg_voi', 'L_cuneus_voi', 'L_hipp_voi', 'L_apahc_voi', 'L_ppahc_voi', 'L_PreCG_voi', 'R_vcing_voi', 'PCC_voi', 'PC_voi', ...
-    'R_amyg_voi', 'R_cuneus_voi', 'R_hipp_voi', 'R_apahc_voi', 'R_ppahc_voi', 'R_PreCG_voi', 'L_vcing_voi', 'L_GM_voi', 'L_WM_voi', 'R_GM_voi', ...
-    'R_WM_voi', 'R_temporal_voi', 'L_temporal_voi'}, ...
-    'index', {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13', '14' ,'15', '16', '17', '18', '19', '20', '21', '22'});
-
 % parfor n =1:2
     VOI_name = ([folder filesep dwi_basename]);
     unix(['source ~/.bash_profile ; fslmaths '  VOI_name sn_VOIs(9).name ' -add ' VOI_name sn_VOIs(4).name ' -add ' VOI_name sn_VOIs(6).name ... 
-        ' -add ' VOI_name sn_VOIs(22).name ' -add ' VOI_name sn_VOIs(17).name ' -binv -mul ' VOI_name sn_VOIs(18).name ' ' VOI_name 'L_exclude_GM.nii.gz']);
+        ' -add ' VOI_name sn_VOIs(22).name ' -add ' VOI_name sn_VOIs(17).name ' -binv -mul ' VOI_name sn_VOIs(18).name ' ' VOI_name 'L_exclude_GM_voi.nii.gz']);
     unix(['source ~/.bash_profile ; fslmaths '  VOI_name sn_VOIs(9).name ' -add ' VOI_name sn_VOIs(13).name ' -add ' VOI_name sn_VOIs(15).name ...
-        ' -add ' VOI_name sn_VOIs(23).name ' -add ' VOI_name sn_VOIs(8).name ' -binv -mul ' VOI_name sn_VOIs(20).name ' ' VOI_name 'R_exclude_GM.nii.gz']);
+        ' -add ' VOI_name sn_VOIs(23).name ' -add ' VOI_name sn_VOIs(8).name ' -binv -mul ' VOI_name sn_VOIs(20).name ' ' VOI_name 'R_exclude_GM_voi.nii.gz']);
     
     
     % unix(['source ~/.bash_profile ; fslmaths '  VOI_name
@@ -387,7 +391,7 @@ poolobj = gcp('nocreate');
 delete(poolobj)
 
 %% Part 5 ANTs Cortical thickness & AAL labels to native DWI space
-s_FA = (dir([dir_DTI_out filesep '*' filesep '*_FA.nii.gz']));
+s_FA = (dir([dir_DTI_out filesep '*' filesep '*DTI_FA.nii.gz']));
 s_DWI = (dir([dir_DTI_int_out filesep 'PT_*_DTI_int_out']));
 clear s_T1s;
 s_T1s = (dir([dir_t1_int_out filesep '*' filesep '*_T1_bc.nii.gz']));
@@ -397,13 +401,13 @@ s_T1_brain = (dir([dir_t1_int_out filesep '*' filesep '*_BrainExtractionBrain.ni
 % Cortical thickness
 for i  = 1:(size(s_T1s,1))
     subj_basename = (s_T1s(i).name(1:end-9)); % to create a base name for ANTs CTH output
-    dwi_basename = (s_FAs(i).name(1:end-9));
+    dwi_basename = (s_FA(i).name(1:end-9));
     %     Cort_th_subj = [dir_t1_out filesep subj_basename 'output' filesep
     %     subj_basename 'cortical_thickness' filesep subj_basename
     %     'antsCTh_'];
     Cort_th_subj = [dir_t1_out filesep subj_basename 'output' filesep  subj_basename 'cortical_thickness'];
     mkdir(Cort_th_subj);
-    tpms = (dir([dir_t1_out filesep subj_basename 'output' filesep  subj_basename 'cortical_thickness' filesep subj_basename '*antsCTh_BrainSegmentationPosteriors*.nii.gz']));
+    tpms = (dir([dir_t1_out filesep subj_basename 'output' filesep  subj_basename 'cortical_thickness' filesep subj_basename 'BrainSegmentationPosteriors*.nii.gz']));
     empty_tpm = [dir_t1_out filesep subj_basename 'output' filesep  subj_basename 'cortical_thickness' filesep subj_basename 'empty_tpm.nii.gz'];
     p5tt_4d = [dir_t1_out filesep subj_basename 'output' filesep  subj_basename 'cortical_thickness' filesep subj_basename 'p5tt_4D.nii.gz'];
     p5tt_4d_in_FA = [s_FA(i).folder filesep  dwi_basename 'p5tt_4D_inFA.nii.gz'];
@@ -426,7 +430,7 @@ for i  = 1:(size(s_T1s,1))
     
     % extracting cortical thickness maps
     unix(['source ~/.bash_profile ; antsCorticalThickness.sh -d 3 -a ' s_T1s(i).folder  filesep s_T1s(i).name  ' -e ' T1_template ' -m ' T1_temp_brain_mask ...
-        ' -p ' dir_templates filesep 'antsCTh_PD25_priors_0%d.nii.gz -g 1 -q 1 -o ' Cort_th_subj]);
+        ' -p ' dir_templates filesep 'antsCTh_PD25_priors_0%d.nii.gz ' ' -r '  aal_in_subj ' -k 1 -g 1 -q 1 -o ' Cort_th_subj filesep subj_basename]);
     
     % Prepping the T1 tpms
     unix(['source ~/.bash_profile ; fslmaths ' tpms(1).folder filesep tpms(1).name ' -mul 0 ' empty_tpm ]);
@@ -447,13 +451,14 @@ for i  = 1:(size(s_T1s,1))
 end
 
 
-%% Part 6    Fiber tracking and tckmap
+%% Part 6 Fiber tracking and tckmap
 % First we need to define a few variables for the tckgen command Why not
 % use ACT here, just need to warp, that is all.
-
+save ([dir_main filesep 'ws_pre_ft.mat']);
 clear all;
 clc;
 
+dir_main   = '/Volumes/LaCie/MTLE_HS';
 dir_source_DTI = [dir_main filesep 'NII' filesep 'DTI' filesep 'orig'];
 dir_source_T1 = [dir_main filesep 'NII' filesep 'T1s' filesep 'orig'];
 dir_t1_int_out = [dir_main filesep 'NII' filesep 'T1s' filesep 'intermediate'];
@@ -464,26 +469,32 @@ dir_DTI_int_out = [dir_main filesep 'NII' filesep 'DTI' filesep 'intermediate'];
 dir_DTI_out = [dir_main filesep 'NII' filesep 'DTI' filesep 'DTI_output'];
 dir_log    = [dir_main filesep 'LOG'];
 dir_templates = [dir_main filesep 'templates'];
+tck_jobs = dir([dir_DTI_out filesep '*']);
 
 % need to define a nice variable containing all my VOIs.... then try
-% tracking again :) R - 5/01/
+% tracking again :) R - 05/01/2018
+% also need to add in MPFC for dorsal cingulum.
 
+% we need the peaks, the FAs, the fods, the masks, the dwis, and the p5tt  + the VOIs
 s_peaks = (dir([dir_DTI_int_out filesep '*' filesep '*peaks.nii.gz']));
-FAs = (dir([dir_DTI_output filesep '*' filesep '*FA.nii.gz']));
-dwi_p5tt = (dir([dir_DTI_output filesep '*' filesep '*p5tt_4D_inFA.nii.gz']));
+FAs = (dir([dir_DTI_out filesep '*' filesep '*_DTI_FA.nii.gz']));
+dwi_p5tt = (dir([dir_DTI_out filesep '*' filesep '*p5tt_4D_inFA.nii.gz']));
 s_fods = (dir([dir_DTI_int_out filesep '*' filesep '*mtnc_msmt_wm_fod.mif']));
 s_dwis = (dir([dir_DTI_int_out filesep '*' filesep '*_pp_bc.mif']));
-s_masks = (dir([dir_DTI_int_out filesep '*' filesep '*Mask.nii.gz']));
-s_L_temp_rois = (dir([dir_DTI_out filesep '*' filesep '*L_temp_rois.nii.gz']));
-s_R_temp_rois = (dir([dir_DTI_out filesep '*' filesep '*R_temp_rois.nii.gz']));
-s_L_par_rois = (dir([dir_DTI_out filesep '*' filesep '*L_par_rois.nii.gz']));
-s_R_par_rois = (dir([dir_DTI_out filesep '*' filesep '*R_par_rois.nii.gz']));
-s_L_wm = (dir([dir_DTI_out filesep '*' filesep '*Lt_WM.nii.gz']));
-s_R_wm = (dir([dir_DTI_out filesep '*' filesep '*Rt_WM.nii.gz']));
-s_Bstem = (dir([dir_DTI_out filesep '*' filesep '*BStem.nii.gz']));
-s_r_hipp = (dir([dir_DTI_out filesep '*' filesep '*R_Hipp.nii.gz']));
-s_l_hipp = (dir([dir_DTI_out filesep '*' filesep '*L_Hipp.nii.gz']));
+s_masks = (dir([dir_DTI_int_out filesep '*' filesep '*BrainExtractionMask.nii.gz']));
 
+VOI_dirs = struct(dir([dir_DTI_out filesep '*' filesep '*VOIs']));
+VOIs_comp = struct([]);
+
+parfor i = 1:size(VOI_dirs,1);
+  
+    
+    VOIs_comp(i).name = (VOI_dirs(i).name(1:end-9));
+    VOIs = (dir([VOI_dirs(i).folder filesep VOI_dirs(i).name filesep '*voi.nii.gz']));
+    VOIs_comp(i).voi_name = ({VOIs.name}');
+    VOIs_comp(i).voi_folder = ([VOI_dirs(i).folder filesep VOI_dirs(i).name]);
+
+end
 
 
 % Loop over the peaks files and do tckgen with include and exclude rois
@@ -498,9 +509,36 @@ s_l_hipp = (dir([dir_DTI_out filesep '*' filesep '*L_Hipp.nii.gz']));
 for i = 1:(size(s_peaks,1));
     basename = (s_peaks(i).name(1:end-20));
     int_output = s_peaks(i).folder;
-    final_output = s_FAs(i).folder;
+    final_output = FAs(i).folder;
     tck_out = ([final_output filesep 'tck_output']);
-    VOIs_dir = s_Bstem(i).folder;
+    
+    unix(['source ~/.bash_profile ; tckgen -algorithm iFOD2 -force -nthreads 7 -select 10000 ' int_output filesep s_fods(i).name ' ' final_output filesep basename 'ifod2_L_phC.tck  -seed_image ' ...
+        VOIs_comp(i).voi_folder filesep VOIs_comp(i).voi_name{19}   ' -mask ' int_output filesep s_masks(i).name  ...
+        ' -include ' VOIs_comp(i).voi_folder filesep VOIs_comp(i).voi_name{13} ...
+        ' -exclude ' VOIs_comp(i).voi_folder filesep VOIs_comp(i).voi_name{1} ' -exclude ' VOIs_comp(i).voi_folder filesep VOIs_comp(i).voi_name{21} ' -exclude ' VOIs_comp(i).voi_folder filesep VOIs_comp(i).voi_name{17}]);
+    
+    unix(['source ~/.bash_profile ; tckgen -algorithm iFOD2 -force -nthreads 7 -select 5000 ' int_output filesep s_fods(i).name ' ' final_output filesep basename 'ifod2_R_phC.tck  -seed_image ' ...
+        VOIs_comp(i).voi_folder filesep VOIs_comp(i).voi_name{6}  ' -act ' final_output filesep dwi_p5tt(i).name ' -mask ' int_output filesep s_masks(i).name  ...
+        ' -include ' VOIs_comp(i).voi_folder filesep VOIs_comp(i).voi_name{13} ...
+        ' -exclude ' VOIs_comp(i).voi_folder filesep VOIs_comp(i).voi_name{1} ' -exclude ' VOIs_comp(i).voi_folder filesep VOIs_comp(i).voi_name{8} ' -exclude ' VOIs_comp(i).voi_folder filesep VOIs_comp(i).voi_name{17}]);
+    
+    
+    
+    unix(['source ~/.bash_profile ; tckgen -algorithm Tensor_Prob -force -nthreads 7 -select 5000 ' int_output filesep s_dwis(i).name ' ' final_output filesep basename 'TP_L_CST.tck  -seed_image ' ...
+        VOIs_comp(i).voi_folder filesep VOIs_comp(i).voi_name{1}  ' -act ' final_output filesep dwi_p5tt(i).name ' -mask ' int_output filesep s_masks(i).name  ...
+        ' -include ' VOIs_comp(i).voi_folder filesep VOIs_comp(i).voi_name{3} ' -exclude ' VOIs_comp(i).voi_folder filesep VOIs_comp(i).voi_name{17}]);
+    
+    % ' -include ' VOIs_comp(i).voi_folder filesep
+    % VOIs_comp(i).voi_name{13} ... ' -exclude ' VOIs_comp(i).voi_folder
+    % ' -act ' final_output filesep dwi_p5tt(i).name ' -include ' VOIs_comp(i).voi_folder filesep VOIs_comp(i).voi_name{12} ' ' filesep VOIs_comp(i).voi_name{1} ' -exclude ' VOIs_comp(i).voi_folder filesep VOIs_comp(i).voi_name{8} 
+    
+    
+    
+    
+    
+    
+    
+    %     VOIs_dir = s_Bstem(i).folder;
     
     % consider using a -maxlength of 200 mm, this may be set to even lower
     % if looking for short connections specifically and also using
